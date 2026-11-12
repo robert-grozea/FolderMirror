@@ -14,6 +14,11 @@ from fm_logging import setup_logging
 FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
 
 
+def _raise_walk_error(error):
+    """Do not silently treat an unreadable subtree as an empty directory."""
+    raise error
+
+
 def _is_reparse_point(path: Path) -> bool:
     """Detect symlinks, junctions and other Windows reparse points."""
     try:
@@ -49,7 +54,7 @@ def assert_no_reparse_points(root: Path) -> None:
         return
     if _is_reparse_point(root):
         raise RuntimeError(f"Destination is a symbolic link or reparse point: {root}")
-    for current, dirs, files in os.walk(root, topdown=True, followlinks=False):
+    for current, dirs, files in os.walk(root, topdown=True, onerror=_raise_walk_error, followlinks=False):
         current_path = Path(current)
         for name in list(dirs) + list(files):
             candidate = current_path / name
@@ -181,7 +186,7 @@ def sync_pair(source_text, destination_text, logger, deletion_mode=None, dry_run
     copied = updated = deleted = 0
 
     source_dirs = set()
-    for current, dirs, files in os.walk(source, topdown=True, followlinks=False):
+    for current, dirs, files in os.walk(source, topdown=True, onerror=_raise_walk_error, followlinks=False):
         current_path = Path(current)
         dirs[:] = [d for d in dirs if not _is_reparse_point(current_path / d)]
         for dirname in dirs:
@@ -190,7 +195,7 @@ def sync_pair(source_text, destination_text, logger, deletion_mode=None, dry_run
     files_to_delete = destination_files - source_files
     dirs_to_delete = []
     if destination.exists():
-        for current, dirs, files in os.walk(destination, topdown=False, followlinks=False):
+        for current, dirs, files in os.walk(destination, topdown=False, onerror=_raise_walk_error, followlinks=False):
             folder = Path(current)
             if folder != destination:
                 relative_dir = folder.relative_to(destination)
