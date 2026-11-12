@@ -25,6 +25,36 @@ def pid_is_running(pid):
         return False
 
 
+
+def daemon_lock_is_held():
+    """Return True when another process owns the daemon lock."""
+    ensure_app_dir()
+    handle = open(LOCK_FILE, "a+b")
+    handle.seek(0)
+    try:
+        if os.name == "nt":
+            import msvcrt
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            except OSError:
+                return True
+            else:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                return False
+        else:
+            import fcntl
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                return True
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                return False
+    finally:
+        handle.close()
+
+
 def is_folder_mirror_daemon(pid):
     """Confirm PID belongs to this Python executable running our daemon entry point."""
     if not pid_is_running(pid):
