@@ -24,7 +24,9 @@ def _is_reparse_point(path: Path) -> bool:
             return True
         attributes = path.lstat().st_file_attributes
         return bool(attributes & FILE_ATTRIBUTE_REPARSE_POINT)
-    except (AttributeError, OSError):
+    except FileNotFoundError:
+        return False
+    except AttributeError:
         return False
 
 
@@ -35,15 +37,16 @@ def assert_no_reparse_points(root: Path) -> None:
     destination through an existing symlink, junction, mount-point or other
     reparse point.
     """
+    # Check ancestors even when the final destination does not exist yet.
+    # A child path can still be reached through a junction higher in the path.
+    for ancestor in reversed(root.parents):
+        if ancestor.exists() or ancestor.is_symlink():
+            if _is_reparse_point(ancestor):
+                raise RuntimeError(
+                    f"Destination path traverses a symbolic link or reparse point: {ancestor}"
+                )
     if not root.exists():
         return
-    # Check ancestors too: a normal-looking child path can still be reached
-    # through a junction or symlink higher in the path.
-    for ancestor in reversed(root.parents):
-        if ancestor.exists() and _is_reparse_point(ancestor):
-            raise RuntimeError(
-                f"Destination path traverses a symbolic link or reparse point: {ancestor}"
-            )
     if _is_reparse_point(root):
         raise RuntimeError(f"Destination is a symbolic link or reparse point: {root}")
     for current, dirs, files in os.walk(root, topdown=True, followlinks=False):
@@ -159,6 +162,8 @@ def sync_pair(source_text, destination_text, logger, deletion_mode=None, dry_run
         raise RuntimeError(f"Source folder is unavailable: {source}")
     if paths_overlap(source, destination):
         raise RuntimeError(f"Unsafe source/destination overlap: {source} -> {destination}")
+    if deletion_mode is None:
+        deletion_mode = "recycle_bin" if os.name == "nt" else "permanent"
     if deletion_mode not in ("recycle_bin", "permanent"):
         raise ValueError("Invalid deletion mode.")
 
@@ -262,7 +267,9 @@ def run_sync(config=None, dry_run=False):
     if config is None:
         config = load_config()
     pairs = validate_pairs(config.get("pairs", []))
-    deletion_mode = config.get("deletion_mode", "recycle_bin")
+    deletion_mode = config.get(
+        "deletion_mode", "recycle_bin" if os.name == "nt" else "permanent"
+    )
     if deletion_mode not in ("recycle_bin", "permanent"):
         raise ValueError("Invalid deletion mode in configuration.")
     if not pairs:
