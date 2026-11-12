@@ -106,6 +106,19 @@ class FolderPairValidationTests(unittest.TestCase):
                 {"source": str(second_source), "destination": str(nested_destination)},
             ])
 
+
+    def test_symlink_alias_cannot_hide_source_destination_overlap(self):
+        alias = self.root / "source-alias"
+        try:
+            alias.symlink_to(self.source, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("Directory symlinks are unavailable on this system")
+        with self.assertRaisesRegex(ValueError, "cannot be the same folder"):
+            fm_config.validate_pairs([{
+                "source": str(self.source),
+                "destination": str(alias / "nested"),
+            }])
+
     def test_destination_overlapping_another_source_is_rejected(self):
         second_source = self.root / "source2"
         second_source.mkdir()
