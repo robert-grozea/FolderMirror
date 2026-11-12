@@ -37,6 +37,13 @@ def assert_no_reparse_points(root: Path) -> None:
     """
     if not root.exists():
         return
+    # Check ancestors too: a normal-looking child path can still be reached
+    # through a junction or symlink higher in the path.
+    for ancestor in reversed(root.parents):
+        if ancestor.exists() and _is_reparse_point(ancestor):
+            raise RuntimeError(
+                f"Destination path traverses a symbolic link or reparse point: {ancestor}"
+            )
     if _is_reparse_point(root):
         raise RuntimeError(f"Destination is a symbolic link or reparse point: {root}")
     for current, dirs, files in os.walk(root, topdown=True, followlinks=False):
