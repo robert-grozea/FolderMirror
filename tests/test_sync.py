@@ -32,7 +32,7 @@ class SyncPairTests(unittest.TestCase):
         nested.mkdir(parents=True)
         (nested / "hello.txt").write_text("hello", encoding="utf-8")
 
-        result = sync_pair(self.source, self.destination, self.logger)
+        result = sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
 
         self.assertEqual(result, (1, 0, 0))
         self.assertEqual(
@@ -43,7 +43,7 @@ class SyncPairTests(unittest.TestCase):
     def test_creates_empty_nested_directories(self):
         (self.source / "empty" / "nested").mkdir(parents=True)
 
-        sync_pair(self.source, self.destination, self.logger)
+        sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
 
         self.assertTrue((self.destination / "empty" / "nested").is_dir())
 
@@ -57,7 +57,7 @@ class SyncPairTests(unittest.TestCase):
         old_time = destination_file.stat().st_mtime_ns
         os.utime(source_file, ns=(old_time + 3_000_000_000, old_time + 3_000_000_000))
 
-        result = sync_pair(self.source, self.destination, self.logger)
+        result = sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
 
         self.assertEqual(result, (0, 1, 0))
         self.assertEqual(destination_file.read_text(encoding="utf-8"), "new content")
@@ -65,7 +65,7 @@ class SyncPairTests(unittest.TestCase):
     def test_deletes_destination_only_file(self):
         (self.destination / "obsolete.txt").write_text("remove me", encoding="utf-8")
 
-        result = sync_pair(self.source, self.destination, self.logger)
+        result = sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
 
         self.assertEqual(result, (0, 0, 1))
         self.assertFalse((self.destination / "obsolete.txt").exists())
@@ -75,15 +75,15 @@ class SyncPairTests(unittest.TestCase):
         obsolete.mkdir(parents=True)
         (obsolete / "old.txt").write_text("remove me", encoding="utf-8")
 
-        sync_pair(self.source, self.destination, self.logger)
+        sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
 
         self.assertFalse((self.destination / "old").exists())
 
     def test_second_sync_is_idempotent(self):
         (self.source / "same.txt").write_text("same", encoding="utf-8")
 
-        first_result = sync_pair(self.source, self.destination, self.logger)
-        second_result = sync_pair(self.source, self.destination, self.logger)
+        first_result = sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
+        second_result = sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
 
         self.assertEqual(first_result, (1, 0, 0))
         self.assertEqual(second_result, (0, 0, 0))
@@ -93,7 +93,7 @@ class SyncPairTests(unittest.TestCase):
         (self.destination / "item" / "child").mkdir(parents=True)
         (self.destination / "item" / "child" / "old.txt").write_text("old", encoding="utf-8")
 
-        result = sync_pair(self.source, self.destination, self.logger)
+        result = sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
 
         # The obsolete child file is counted as deleted before the directory is replaced.
         self.assertEqual(result, (1, 0, 1))
@@ -104,7 +104,7 @@ class SyncPairTests(unittest.TestCase):
         (self.source / "item" / "nested").mkdir(parents=True)
         (self.destination / "item").write_text("old file", encoding="utf-8")
 
-        sync_pair(self.source, self.destination, self.logger)
+        sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
 
         self.assertTrue((self.destination / "item" / "nested").is_dir())
 
@@ -112,7 +112,7 @@ class SyncPairTests(unittest.TestCase):
         (self.source / "new.txt").write_text("new", encoding="utf-8")
         (self.destination / "obsolete.txt").write_text("keep during preview", encoding="utf-8")
 
-        result = sync_pair(self.source, self.destination, self.logger, dry_run=True)
+        result = sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent", dry_run=True)
 
         self.assertEqual(result, (1, 0, 1))
         self.assertFalse((self.destination / "new.txt").exists())
@@ -130,7 +130,7 @@ class SyncPairTests(unittest.TestCase):
 
         (self.source / "new.txt").write_text("new", encoding="utf-8")
         with self.assertRaisesRegex(RuntimeError, "reparse point"):
-            sync_pair(self.source, self.destination, self.logger)
+            sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
         self.assertFalse((self.destination / "new.txt").exists())
         self.assertEqual((outside / "keep.txt").read_text(encoding="utf-8"), "keep")
 
@@ -143,13 +143,13 @@ class SyncPairTests(unittest.TestCase):
         except (OSError, NotImplementedError):
             self.skipTest("File symlinks are unavailable on this system")
 
-        sync_pair(self.source, self.destination, self.logger)
+        sync_pair(self.source, self.destination, self.logger, deletion_mode="permanent")
         self.assertFalse((self.destination / "linked.txt").exists())
 
     def test_rejects_overlapping_paths(self):
         nested_destination = self.source / "inside"
         with self.assertRaisesRegex(RuntimeError, "Unsafe source/destination overlap"):
-            sync_pair(self.source, nested_destination, self.logger)
+            sync_pair(self.source, nested_destination, self.logger, deletion_mode="permanent")
 
 
 if __name__ == "__main__":
