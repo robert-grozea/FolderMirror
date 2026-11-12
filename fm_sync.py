@@ -62,6 +62,9 @@ def assert_no_reparse_points(root: Path) -> None:
 
 def _assert_safe_destination_path(destination: Path, target: Path) -> None:
     """Check existing components immediately before operating on a target."""
+    for ancestor in reversed(destination.parents):
+        if (ancestor.exists() or ancestor.is_symlink()) and _is_reparse_point(ancestor):
+            raise RuntimeError(f"Destination path traverses a reparse point: {ancestor}")
     try:
         relative = target.relative_to(destination)
     except ValueError as exc:
@@ -215,6 +218,7 @@ def sync_pair(source_text, destination_text, logger, deletion_mode=None, dry_run
 
     for folder in top_level_dirs:
         _assert_safe_destination_path(destination, folder)
+        assert_no_reparse_points(folder)
         if not dry_run:
             _delete_path(folder, deletion_mode)
         deleted += 1
