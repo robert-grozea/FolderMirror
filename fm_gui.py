@@ -14,7 +14,7 @@ from fm_config import (
     APP_NAME, CONFIG_FILE, DEFAULT_INTERVAL, LOG_FILE, PID_FILE,
     ensure_app_dir, load_config, save_config, validate_pairs,
 )
-from fm_daemon import pid_is_running
+from fm_daemon import is_folder_mirror_daemon
 from fm_logging import setup_logging
 from fm_sync import run_sync
 
@@ -106,6 +106,7 @@ class FolderMirrorUI:
         ttk.Spinbox(daemon_frame, from_=10, to=86400, increment=10, width=9, textvariable=self.interval).pack(side="left", padx=6)
         ttk.Button(daemon_frame, text="Start daemon", command=self.start_daemon).pack(side="left", padx=(12, 5))
         ttk.Button(daemon_frame, text="Stop daemon", command=self.stop_daemon).pack(side="left")
+        ttk.Button(daemon_frame, text="Preview", command=lambda: self.run_now(dry_run=True)).pack(side="right", padx=(0, 6))
         ttk.Button(daemon_frame, text="Run now", command=self.run_now).pack(side="right")
 
         footer = ttk.Frame(outer)
@@ -114,7 +115,7 @@ class FolderMirrorUI:
         ttk.Button(footer, text="Open log", command=self.open_log).pack(side="right")
         ttk.Label(
             outer,
-            text="WARNING: Files deleted from a source are deleted from its destination on the next run.",
+            text="Source deletions are mirrored; on Windows, destination-only items go to the Recycle Bin by default.",
             foreground="#A33"
         ).pack(anchor="w", pady=(8, 0))
 
@@ -193,17 +194,18 @@ class FolderMirrorUI:
             messagebox.showerror("Configuration error", str(exc))
             return False
 
-    def run_now(self):
+    def run_now(self, dry_run=False):
         if not self.save(silent=True):
             return
         if not self.config.get("pairs"):
             messagebox.showinfo("Nothing to synchronize", "Add at least one folder pair first.")
             return
-        self.status.set("Synchronization running...")
+        self.status.set("Generating synchronization preview..." if dry_run else "Synchronization running...")
         def worker():
             try:
-                result = run_sync(self.config)
-                message = f"Finished. Copied: {result[0]}, updated: {result[1]}, deleted: {result[2]}"
+                result = run_sync(self.config, dry_run=dry_run)
+                prefix = "Preview complete" if dry_run else "Finished"
+                message = f"{prefix}. Copied: {result[0]}, updated: {result[1]}, deleted: {result[2]}"
                 self.root.after(0, lambda: self.status.set(message))
             except Exception as exc:
                 # Exception variables are cleared when the except block exits.
@@ -232,7 +234,7 @@ class FolderMirrorUI:
 
     def refresh_daemon_status(self):
         pid = self.daemon_pid()
-        if pid_is_running(pid):
+        if is_folder_mirror_daemon(pid):
             self.status.set(f"Background daemon running (PID {pid})")
         elif not getattr(self, "_daemon_start_pending", False):
             self.status.set("Background daemon stopped.")
@@ -261,7 +263,7 @@ class FolderMirrorUI:
             )
             return
 
-        if pid == process.pid and pid_is_running(pid):
+        if pid == process.pid and is_folder_mirror_daemon(pid):
             self._daemon_start_pending = False
             self.status.set(f"Background daemon running (PID {pid})")
             return
@@ -286,7 +288,7 @@ class FolderMirrorUI:
         if not self.save(silent=True):
             return
         pid = self.daemon_pid()
-        if pid_is_running(pid):
+        if is_folder_mirror_daemon(pid):
             messagebox.showinfo("Daemon", f"The daemon is already running (PID {pid}).")
             return
         # Launch the application entry point, not this GUI module.
@@ -320,8 +322,13 @@ class FolderMirrorUI:
 
     def stop_daemon(self):
         pid = self.daemon_pid()
-        if not pid_is_running(pid):
-            messagebox.showinfo("Daemon", "The daemon does not appear to be running.")
+        if not is_folder_mirror_daemon(pid):
+            messagebox.showwarning(
+                "Daemon identity not verified",
+                "The PID file does not point to a verified Folder Mirror daemon. "
+                "For safety, no process was terminated. If a stale PID file exists, "
+                "remove it only after confirming no Folder Mirror daemon is running."
+            )
             return
         if os.name == "nt":
             result = subprocess.run(

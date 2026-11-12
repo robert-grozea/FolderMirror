@@ -29,11 +29,13 @@ class ConfigPersistenceTests(unittest.TestCase):
         config = fm_config.load_config()
         self.assertEqual(config["pairs"], [])
         self.assertEqual(config["interval_seconds"], fm_config.DEFAULT_INTERVAL)
+        self.assertEqual(config["deletion_mode"], "recycle_bin" if fm_config.os.name == "nt" else "permanent")
 
     def test_save_and_load_round_trip(self):
         expected = {
             "pairs": [{"source": "C:/Source", "destination": "D:/Mirror"}],
             "interval_seconds": 120,
+            "deletion_mode": "recycle_bin" if fm_config.os.name == "nt" else "permanent",
         }
         fm_config.save_config(expected)
         self.assertTrue(self.config_file.is_file())
@@ -69,8 +71,8 @@ class FolderPairValidationTests(unittest.TestCase):
             "destination": str(self.destination),
         }])
         self.assertEqual(len(result), 1)
-        self.assertEqual(Path(result[0]["source"]), self.source.resolve())
-        self.assertEqual(Path(result[0]["destination"]), self.destination.resolve())
+        self.assertEqual(Path(result[0]["source"]), fm_config.canonical(self.source))
+        self.assertEqual(Path(result[0]["destination"]), fm_config.canonical(self.destination))
 
     def test_missing_source_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "source folder does not exist"):
@@ -103,6 +105,19 @@ class FolderPairValidationTests(unittest.TestCase):
                 {"source": str(self.source), "destination": str(self.destination)},
                 {"source": str(second_source), "destination": str(nested_destination)},
             ])
+
+
+    def test_symlink_alias_cannot_hide_source_destination_overlap(self):
+        alias = self.root / "source-alias"
+        try:
+            alias.symlink_to(self.source, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("Directory symlinks are unavailable on this system")
+        with self.assertRaisesRegex(ValueError, "cannot be the same folder"):
+            fm_config.validate_pairs([{
+                "source": str(self.source),
+                "destination": str(alias / "nested"),
+            }])
 
     def test_destination_overlapping_another_source_is_rejected(self):
         second_source = self.root / "source2"
