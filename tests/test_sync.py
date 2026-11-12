@@ -175,7 +175,7 @@ class RunSyncTests(unittest.TestCase):
             logger.addHandler(logging.NullHandler())
             logger.propagate = False
 
-            with patch("fm_sync.setup_logging", return_value=logger):
+            with patch("sync.setup_logging", return_value=logger):
                 result = run_sync({
                     "pairs": [{"source": str(source), "destination": str(destination)}]
                 })
