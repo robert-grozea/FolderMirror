@@ -52,18 +52,20 @@ def canonical(path):
 
 
 def paths_overlap(a: Path, b: Path):
-    """True if either path is the same as, or nested under, the other."""
-    try:
-        a.relative_to(b)
-        return True
-    except ValueError:
-        pass
-    try:
-        b.relative_to(a)
-        return True
-    except ValueError:
-        return False
-
+    """True if either lexical or resolved paths are equal/nested."""
+    pairs = ((a, b), (a.resolve(strict=False), b.resolve(strict=False)))
+    for left, right in pairs:
+        try:
+            left.relative_to(right)
+            return True
+        except ValueError:
+            pass
+        try:
+            right.relative_to(left)
+            return True
+        except ValueError:
+            pass
+    return False
 
 def validate_pairs(pairs):
     cleaned = []
