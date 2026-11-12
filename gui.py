@@ -10,13 +10,13 @@ from pathlib import Path
 from tkinter import Tk, StringVar, END, messagebox, filedialog
 from tkinter import ttk
 
-from fm_config import (
+from app_config import (
     APP_NAME, CONFIG_FILE, DEFAULT_INTERVAL, LOG_FILE, PID_FILE,
     ensure_app_dir, load_config, save_config, validate_pairs,
 )
-from fm_daemon import daemon_lock_is_held, is_folder_mirror_daemon
-from fm_logging import setup_logging
-from fm_sync import run_sync
+from daemon import daemon_lock_is_held, is_folder_mirror_daemon
+from app_logging import setup_logging
+from sync import run_sync
 
 class FolderMirrorUI:
     def __init__(self, root):
@@ -312,7 +312,7 @@ class FolderMirrorUI:
             self.refresh_daemon_status()
             return
         # Launch the application entry point, not this GUI module.
-        # fm_gui.py only defines the interface; folder_mirror.py handles --daemon.
+        # gui.py only defines the interface; folder_mirror.py handles --daemon.
         script = str(Path(__file__).resolve().with_name("folder_mirror.py"))
         creationflags = 0
         if os.name == "nt":

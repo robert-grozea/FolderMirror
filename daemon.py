@@ -8,11 +8,11 @@ import sys
 import time
 from pathlib import Path
 
-from fm_config import (
+from app_config import (
     DEFAULT_INTERVAL, LOCK_FILE, PID_FILE, ensure_app_dir, load_config,
 )
-from fm_logging import setup_logging
-from fm_sync import run_sync
+from app_logging import setup_logging
+from sync import run_sync
 
 
 def pid_is_running(pid):

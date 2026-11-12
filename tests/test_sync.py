@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fm_sync import sync_pair
+from sync import sync_pair
 
 
 class SyncPairTests(unittest.TestCase):
@@ -161,7 +161,7 @@ class RunSyncTests(unittest.TestCase):
 
     def test_run_sync_validates_pairs_and_runs_them(self):
         from unittest.mock import patch
-        from fm_sync import run_sync
+        from sync import run_sync
 
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
