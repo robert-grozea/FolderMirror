@@ -108,6 +108,44 @@ class SyncPairTests(unittest.TestCase):
 
         self.assertTrue((self.destination / "item" / "nested").is_dir())
 
+    def test_dry_run_does_not_modify_destination(self):
+        (self.source / "new.txt").write_text("new", encoding="utf-8")
+        (self.destination / "obsolete.txt").write_text("keep during preview", encoding="utf-8")
+
+        result = sync_pair(self.source, self.destination, self.logger, dry_run=True)
+
+        self.assertEqual(result, (1, 0, 1))
+        self.assertFalse((self.destination / "new.txt").exists())
+        self.assertTrue((self.destination / "obsolete.txt").exists())
+
+    def test_rejects_destination_symlink_before_modifying_anything(self):
+        outside = Path(self.temp_dir.name) / "outside"
+        outside.mkdir()
+        (outside / "keep.txt").write_text("keep", encoding="utf-8")
+        link = self.destination / "linked"
+        try:
+            link.symlink_to(outside, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            self.skipTest("Directory symlinks are unavailable on this system")
+
+        (self.source / "new.txt").write_text("new", encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "reparse point"):
+            sync_pair(self.source, self.destination, self.logger)
+        self.assertFalse((self.destination / "new.txt").exists())
+        self.assertEqual((outside / "keep.txt").read_text(encoding="utf-8"), "keep")
+
+    def test_skips_source_symlink(self):
+        outside = Path(self.temp_dir.name) / "outside-source.txt"
+        outside.write_text("outside", encoding="utf-8")
+        link = self.source / "linked.txt"
+        try:
+            link.symlink_to(outside)
+        except (OSError, NotImplementedError):
+            self.skipTest("File symlinks are unavailable on this system")
+
+        sync_pair(self.source, self.destination, self.logger)
+        self.assertFalse((self.destination / "linked.txt").exists())
+
     def test_rejects_overlapping_paths(self):
         nested_destination = self.source / "inside"
         with self.assertRaisesRegex(RuntimeError, "Unsafe source/destination overlap"):
