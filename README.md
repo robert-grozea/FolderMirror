@@ -35,28 +35,9 @@ You can also run it from PowerShell:
 py -3 .\\folder_mirror.py
 ```
 
-## Project structure
-
-All Python modules are kept together in one folder:
-
-| File | Responsibility |
-|---|---|
-| `folder_mirror.py` | Application entry point and command-line arguments |
-| `fm_config.py` | Application paths, configuration read/write, and validation |
-| `fm_sync.py` | Recursive file and directory mirroring |
-| `fm_logging.py` | Shared log-file setup |
-| `fm_daemon.py` | Background loop, PID tracking, and single-instance lock |
-| `fm_gui.py` | Tkinter interface and user actions |
-
-The modules are intentionally separate by responsibility. Keep them in the same directory; the launcher scripts expect this layout.
-
 ## Independent daemon / command line
 
 The daemon is a separate process and continues running after the UI is closed.
-
-- Start from the UI using **Start daemon**.
-- Stop from the UI using **Stop daemon**.
-- Run one synchronization cycle without opening the UI:
 
 ```powershell
 py -3 .\\folder_mirror.py --run-once
@@ -78,8 +59,6 @@ This is a one-way mirror, not a versioned backup:
 - Changed source files overwrite their destination copies.
 - Destination-only files are deleted.
 - Empty destination subfolders are removed.
-
-**A deletion in the source is propagated to the destination.** Do not use a destination folder containing unrelated files. Test with disposable folders before pointing the app at important data.
 
 The application rejects source/destination paths that are identical or nested inside one another, to prevent recursive copying or accidental deletion. Symbolic links are skipped.
 
