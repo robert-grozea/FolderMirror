@@ -14,7 +14,7 @@ from fm_config import (
     APP_NAME, CONFIG_FILE, DEFAULT_INTERVAL, LOG_FILE, PID_FILE,
     ensure_app_dir, load_config, save_config, validate_pairs,
 )
-from fm_daemon import is_folder_mirror_daemon
+from fm_daemon import daemon_lock_is_held, is_folder_mirror_daemon
 from fm_logging import setup_logging
 from fm_sync import run_sync
 
@@ -234,8 +234,14 @@ class FolderMirrorUI:
 
     def refresh_daemon_status(self):
         pid = self.daemon_pid()
-        if is_folder_mirror_daemon(pid):
-            self.status.set(f"Background daemon running (PID {pid})")
+        lock_held = daemon_lock_is_held()
+        if lock_held:
+            if is_folder_mirror_daemon(pid):
+                self.status.set(f"Background daemon running (PID {pid})")
+            else:
+                self.status.set(
+                    "Background daemon active (lock held; process identity not verified)."
+                )
         elif not getattr(self, "_daemon_start_pending", False):
             self.status.set("Background daemon stopped.")
         self.root.after(3000, self.refresh_daemon_status)
@@ -263,9 +269,14 @@ class FolderMirrorUI:
             )
             return
 
-        if pid == process.pid and is_folder_mirror_daemon(pid):
+        if pid == process.pid and daemon_lock_is_held():
             self._daemon_start_pending = False
-            self.status.set(f"Background daemon running (PID {pid})")
+            if is_folder_mirror_daemon(pid):
+                self.status.set(f"Background daemon running (PID {pid})")
+            else:
+                self.status.set(
+                    "Background daemon active (lock held; process identity not verified)."
+                )
             return
 
         if attempts_left > 0:
@@ -288,8 +299,17 @@ class FolderMirrorUI:
         if not self.save(silent=True):
             return
         pid = self.daemon_pid()
-        if is_folder_mirror_daemon(pid):
-            messagebox.showinfo("Daemon", f"The daemon is already running (PID {pid}).")
+        if daemon_lock_is_held():
+            if is_folder_mirror_daemon(pid):
+                messagebox.showinfo("Daemon", f"The daemon is already running (PID {pid}).")
+            else:
+                messagebox.showwarning(
+                    "Daemon already active",
+                    "The daemon lock is held by another process, so a second daemon "
+                    "will not be started. The recorded process identity could not "
+                    "be verified; no process was terminated."
+                )
+            self.refresh_daemon_status()
             return
         # Launch the application entry point, not this GUI module.
         # fm_gui.py only defines the interface; folder_mirror.py handles --daemon.
@@ -322,6 +342,10 @@ class FolderMirrorUI:
 
     def stop_daemon(self):
         pid = self.daemon_pid()
+        if not daemon_lock_is_held():
+            self.status.set("Background daemon stopped.")
+            messagebox.showinfo("Daemon", "No active daemon lock was found.")
+            return
         if not is_folder_mirror_daemon(pid):
             messagebox.showwarning(
                 "Daemon identity not verified",
