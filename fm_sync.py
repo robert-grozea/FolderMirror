@@ -45,7 +45,7 @@ def assert_no_reparse_points(root: Path) -> None:
                 raise RuntimeError(
                     f"Destination path traverses a symbolic link or reparse point: {ancestor}"
                 )
-    if not root.exists():
+    if not root.exists() and not root.is_symlink():
         return
     if _is_reparse_point(root):
         raise RuntimeError(f"Destination is a symbolic link or reparse point: {root}")
@@ -126,7 +126,7 @@ def _send_to_recycle_bin(path: Path) -> None:
         ]
 
     # Double-NUL termination is required by SHFileOperationW.
-    source_list = str(path) + "\\0\\0"
+    source_list = str(path) + "\0\0"
     operation = SHFILEOPSTRUCTW()
     operation.hwnd = None
     operation.wFunc = 3  # FO_DELETE
