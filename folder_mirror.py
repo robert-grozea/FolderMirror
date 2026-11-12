@@ -23,16 +23,17 @@ def main():
     parser = argparse.ArgumentParser(description=APP_NAME)
     parser.add_argument("--daemon", action="store_true", help="Run the independent background daemon")
     parser.add_argument("--run-once", action="store_true", help="Run one synchronization cycle and exit")
+    parser.add_argument("--dry-run", action="store_true", help="Preview changes without modifying files (use with --run-once)")
     args = parser.parse_args()
 
     if args.daemon:
         raise SystemExit(daemon_loop())
     if args.run_once:
-        result = run_sync()
+        result = run_sync(dry_run=args.dry_run)
         print(f"Finished. Copied: {result[0]}, updated: {result[1]}, deleted: {result[2]}")
         return
 
-    root = Tk()
+    if args.dry_run:\n        parser.error("--dry-run requires --run-once")\n\n    root = Tk()
     FolderMirrorUI(root)
     root.mainloop()
 
