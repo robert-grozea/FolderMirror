@@ -25,13 +25,14 @@ def ensure_app_dir():
 def load_config():
     ensure_app_dir()
     if not CONFIG_FILE.exists():
-        return {"pairs": [], "interval_seconds": DEFAULT_INTERVAL}
+        return {"pairs": [], "interval_seconds": DEFAULT_INTERVAL, "deletion_mode": "recycle_bin" if os.name == "nt" else "permanent"}
     try:
         data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             raise ValueError("Invalid configuration")
         data.setdefault("pairs", [])
         data.setdefault("interval_seconds", DEFAULT_INTERVAL)
+        data.setdefault("deletion_mode", "recycle_bin" if os.name == "nt" else "permanent")
         return data
     except Exception as exc:
         raise RuntimeError(f"Could not read configuration {CONFIG_FILE}: {exc}") from exc
@@ -45,7 +46,9 @@ def save_config(data):
 
 
 def canonical(path):
-    return Path(path).expanduser().resolve()
+    # Normalize to an absolute path without following symlinks/junctions.
+    # Resolving here would hide a destination that is itself a reparse point.
+    return Path(os.path.abspath(os.path.expanduser(str(path))))
 
 
 def paths_overlap(a: Path, b: Path):
