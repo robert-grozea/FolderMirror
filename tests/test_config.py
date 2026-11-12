@@ -29,11 +29,13 @@ class ConfigPersistenceTests(unittest.TestCase):
         config = fm_config.load_config()
         self.assertEqual(config["pairs"], [])
         self.assertEqual(config["interval_seconds"], fm_config.DEFAULT_INTERVAL)
+        self.assertEqual(config["deletion_mode"], "recycle_bin" if fm_config.os.name == "nt" else "permanent")
 
     def test_save_and_load_round_trip(self):
         expected = {
             "pairs": [{"source": "C:/Source", "destination": "D:/Mirror"}],
             "interval_seconds": 120,
+            "deletion_mode": "recycle_bin" if fm_config.os.name == "nt" else "permanent",
         }
         fm_config.save_config(expected)
         self.assertTrue(self.config_file.is_file())
