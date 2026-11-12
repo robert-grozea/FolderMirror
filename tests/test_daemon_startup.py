@@ -40,13 +40,13 @@ class DaemonStartupSourceTests(unittest.TestCase):
             source,
         )
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_gui_refuses_to_stop_unverified_process(self):
         source = (Path(__file__).resolve().parents[1] / "fm_gui.py").read_text(
             encoding="utf-8"
         )
         self.assertIn("if not is_folder_mirror_daemon(pid):", source)
         self.assertIn("no process was terminated", source)
+
+
+if __name__ == "__main__":
+    unittest.main()
