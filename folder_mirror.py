@@ -2,20 +2,20 @@
 """Folder Mirror application entry point.
 
 The implementation is split into small modules:
-- fm_config.py: paths, settings, and validation
-- fm_sync.py: recursive mirror operations
-- fm_logging.py: shared log configuration
-- fm_daemon.py: independent background process
-- fm_gui.py: Tkinter interface
+- app_config.py: paths, settings, and validation
+- sync.py: recursive mirror operations
+- app_logging.py: shared log configuration
+- daemon.py: independent background process
+- gui.py: Tkinter interface
 """
 from __future__ import annotations
 
 import argparse
 
-from fm_config import APP_NAME
-from fm_daemon import daemon_loop
-from fm_sync import run_sync
-from fm_gui import FolderMirrorUI
+from app_config import APP_NAME
+from daemon import daemon_loop
+from sync import run_sync
+from gui import FolderMirrorUI
 from tkinter import Tk
 
 

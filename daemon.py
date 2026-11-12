@@ -8,11 +8,11 @@ import sys
 import time
 from pathlib import Path
 
-from fm_config import (
+from app_config import (
     DEFAULT_INTERVAL, LOCK_FILE, PID_FILE, ensure_app_dir, load_config,
 )
-from fm_logging import setup_logging
-from fm_sync import run_sync
+from app_logging import setup_logging
+from sync import run_sync
 
 
 def pid_is_running(pid):
@@ -23,6 +23,36 @@ def pid_is_running(pid):
         return True
     except OSError:
         return False
+
+
+
+def daemon_lock_is_held():
+    """Return True when another process owns the daemon lock."""
+    ensure_app_dir()
+    handle = open(LOCK_FILE, "a+b")
+    handle.seek(0)
+    try:
+        if os.name == "nt":
+            import msvcrt
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            except OSError:
+                return True
+            else:
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                return False
+        else:
+            import fcntl
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError:
+                return True
+            else:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                return False
+    finally:
+        handle.close()
 
 
 def is_folder_mirror_daemon(pid):

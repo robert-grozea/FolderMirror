@@ -1,7 +1,7 @@
 """Centralized file logging shared by the GUI and background daemon."""
 import logging
 
-from fm_config import LOG_FILE, ensure_app_dir
+from app_config import LOG_FILE, ensure_app_dir
 
 def setup_logging():
     ensure_app_dir()

@@ -8,8 +8,8 @@ import tempfile
 from ctypes import wintypes
 from pathlib import Path
 
-from fm_config import canonical, paths_overlap, load_config, validate_pairs
-from fm_logging import setup_logging
+from app_config import canonical, paths_overlap, load_config, validate_pairs
+from app_logging import setup_logging
 
 FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
 
