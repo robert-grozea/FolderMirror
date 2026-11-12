@@ -11,7 +11,7 @@ class DaemonStartupSourceTests(unittest.TestCase):
         )
         self.assertIn("def _check_daemon_start(self, process, attempts_left=12):", source)
         self.assertIn("process.poll()", source)
-        self.assertIn("pid == process.pid and pid_is_running(pid)", source)
+        self.assertIn("pid == process.pid and is_folder_mirror_daemon(pid)", source)
 
     def test_startup_failure_displays_recent_log(self):
         source = (Path(__file__).resolve().parents[1] / "fm_gui.py").read_text(
@@ -39,6 +39,13 @@ class DaemonStartupSourceTests(unittest.TestCase):
             'script = str(Path(__file__).resolve())',
             source,
         )
+
+    def test_gui_refuses_to_stop_unverified_process(self):
+        source = (Path(__file__).resolve().parents[1] / "fm_gui.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("if not is_folder_mirror_daemon(pid):", source)
+        self.assertIn("no process was terminated", source)
 
 
 if __name__ == "__main__":

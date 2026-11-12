@@ -8,7 +8,8 @@ A small Python/Tkinter application that mirrors multiple source folders into the
 - Recursively synchronize all files and subfolders, including empty directories.
 - Copy new files and update changed files.
 - Delete destination files and folders that no longer exist in the source.
-- Run a one-time synchronization from the UI.
+- Preview pending changes without modifying files (dry run).
+- Move destination-only items to the Windows Recycle Bin by default instead of permanently deleting them.
 - Start an independent background daemon from the UI.
 - Configure the daemon interval (minimum 10 seconds).
 - Stop the background daemon from the UI.
@@ -39,6 +40,19 @@ py -3 .\\folder_mirror.py
 
 The daemon is a separate process and continues running after the UI is closed.
 
+<<<<<<< HEAD
+=======
+- Start from the UI using **Start daemon**.
+- Stop from the UI using **Stop daemon**.
+- Preview a synchronization without changing files:
+
+```powershell
+py -3 .\\folder_mirror.py --run-once --dry-run
+```
+
+- Run one synchronization cycle without opening the UI:
+
+>>>>>>> 479c71eb3fba6f99ab1012a49eb1360d4b28bb46
 ```powershell
 py -3 .\\folder_mirror.py --run-once
 ```
@@ -57,10 +71,25 @@ This is a one-way mirror, not a versioned backup:
 
 - Source-only files are copied to the destination.
 - Changed source files overwrite their destination copies.
-- Destination-only files are deleted.
+- Destination-only files and folders are moved to the Windows Recycle Bin by default. On non-Windows systems, deletion is permanent.
 - Empty destination subfolders are removed.
+- Use **Preview** in the GUI or `--run-once --dry-run` to inspect the planned copy/update/delete counts without changing files.
 
+<<<<<<< HEAD
 The application rejects source/destination paths that are identical or nested inside one another, to prevent recursive copying or accidental deletion. Symbolic links are skipped.
+=======
+**A deletion in the source is propagated to the destination.** Do not use a destination folder containing unrelated files. Test with disposable folders before pointing the app at important data.
+
+The application rejects source/destination paths that are identical or nested inside one another, to prevent recursive copying or accidental deletion. Source symbolic links are skipped. Synchronization fails closed if the destination tree or any destination ancestor contains a symbolic link, junction, or other Windows reparse point.
+
+### Deletion behavior
+
+On Windows, destination-only items are sent to the Recycle Bin by default. The setting is stored in `%APPDATA%\\FolderMirror\\config.json` as `"deletion_mode": "recycle_bin"`. To permanently delete destination-only items instead, stop the daemon and change this value to `"permanent"`. The next daemon cycle reloads the setting. On non-Windows platforms, the default is permanent deletion.
+
+### Daemon process safety
+
+The GUI checks the recorded PID against the running executable and command line before treating it as Folder Mirror or stopping it. If the process identity cannot be verified, the GUI refuses to terminate it.
+>>>>>>> 479c71eb3fba6f99ab1012a49eb1360d4b28bb46
 
 ## Notes
 
@@ -88,7 +117,7 @@ The `-v` option prints each test name and its result. A successful run ends
 with output similar to:
 
 ```text
-Ran 23 tests in 0.1s
+The exact test count and duration may change as tests are added.
 
 OK
 ```
@@ -96,6 +125,9 @@ OK
 The exact number and duration may change as tests are added.
 
 ### What is tested
+
+- Destination symlink/junction rejection and source symlink skipping.
+- Dry-run preview does not modify files.
 
 - Configuration defaults, saving/loading, and invalid JSON handling.
 - Validation of source and destination paths, including overlapping paths.
