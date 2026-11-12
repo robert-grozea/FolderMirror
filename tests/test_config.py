@@ -71,8 +71,8 @@ class FolderPairValidationTests(unittest.TestCase):
             "destination": str(self.destination),
         }])
         self.assertEqual(len(result), 1)
-        self.assertEqual(Path(result[0]["source"]), self.source.resolve())
-        self.assertEqual(Path(result[0]["destination"]), self.destination.resolve())
+        self.assertEqual(Path(result[0]["source"]), fm_config.canonical(self.source))
+        self.assertEqual(Path(result[0]["destination"]), fm_config.canonical(self.destination))
 
     def test_missing_source_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "source folder does not exist"):
