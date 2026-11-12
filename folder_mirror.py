@@ -33,7 +33,10 @@ def main():
         print(f"Finished. Copied: {result[0]}, updated: {result[1]}, deleted: {result[2]}")
         return
 
-    if args.dry_run:\n        parser.error("--dry-run requires --run-once")\n\n    root = Tk()
+    if args.dry_run:
+        parser.error("--dry-run requires --run-once")
+
+    root = Tk()
     FolderMirrorUI(root)
     root.mainloop()
 
