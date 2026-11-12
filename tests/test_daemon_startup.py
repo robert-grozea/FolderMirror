@@ -47,6 +47,13 @@ class DaemonStartupSourceTests(unittest.TestCase):
         self.assertIn("if not is_folder_mirror_daemon(pid):", source)
         self.assertIn("no process was terminated", source)
 
+    def test_gui_uses_lock_for_daemon_status_and_duplicate_start(self):
+        source = (Path(__file__).resolve().parents[1] / "fm_gui.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("lock_held = daemon_lock_is_held()", source)
+        self.assertIn("if daemon_lock_is_held():", source)
+
 
 if __name__ == "__main__":
     unittest.main()
