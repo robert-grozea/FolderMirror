@@ -120,7 +120,7 @@ def _send_to_recycle_bin(path: Path) -> None:
     operation = SHFILEOPSTRUCTW()
     operation.hwnd = None
     operation.wFunc = 3  # FO_DELETE
-    operation.pFrom = source_list
+    operation.pFrom = ctypes.c_wchar_p(source_list)
     operation.pTo = None
     operation.fFlags = 0x0040 | 0x0010 | 0x0004 | 0x0400  # undo, quiet, no UI
     operation.fAnyOperationsAborted = False
@@ -144,7 +144,7 @@ def _delete_path(path: Path, deletion_mode: str) -> None:
         raise ValueError("deletion_mode must be 'recycle_bin' or 'permanent'")
 
 
-def sync_pair(source_text, destination_text, logger, deletion_mode="recycle_bin", dry_run=False):
+def sync_pair(source_text, destination_text, logger, deletion_mode=None, dry_run=False):
     source = canonical(source_text)
     destination = canonical(destination_text)
 
