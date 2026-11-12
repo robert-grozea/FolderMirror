@@ -115,7 +115,7 @@ class FolderMirrorUI:
         ttk.Button(footer, text="Open log", command=self.open_log).pack(side="right")
         ttk.Label(
             outer,
-            text="WARNING: Files deleted from a source are deleted from its destination on the next run.",
+            text="Source deletions are mirrored; on Windows, destination-only items go to the Recycle Bin by default.",
             foreground="#A33"
         ).pack(anchor="w", pady=(8, 0))
 
