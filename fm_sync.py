@@ -127,10 +127,11 @@ def _send_to_recycle_bin(path: Path) -> None:
 
     # Double-NUL termination is required by SHFileOperationW.
     source_list = str(path) + "\0\0"
+    source_buffer = ctypes.create_unicode_buffer(source_list)
     operation = SHFILEOPSTRUCTW()
     operation.hwnd = None
     operation.wFunc = 3  # FO_DELETE
-    operation.pFrom = ctypes.c_wchar_p(source_list)
+    operation.pFrom = ctypes.cast(source_buffer, wintypes.LPCWSTR)
     operation.pTo = None
     operation.fFlags = 0x0040 | 0x0010 | 0x0004 | 0x0400  # undo, quiet, no UI
     operation.fAnyOperationsAborted = False
